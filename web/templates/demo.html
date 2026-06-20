@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- 演示页面标题 -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <h2 class="mb-2">
+            <i class="bi bi-play-circle-fill text-primary me-2"></i>
+            票多多功能演示
+        </h2>
+        <p class="text-muted mb-0">体验演唱会票价智能比价的完整功能</p>
+    </div>
+</div>
+
+<!-- 演示内容：搜索框 -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-header bg-white border-0 pb-0">
+        <h4 class="mb-0">
+            <i class="bi bi-search text-primary"></i> 快速搜索
+        </h4>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('search') }}" method="POST" class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="keyword"
+                           placeholder="输入关键词，如：周杰伦、五月天、演唱会..."
+                           value="周杰伦" required>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-lg" name="mode">
+                    <option value="sample" selected>示例数据</option>
+                    <option value="auto">自动模式</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <i class="bi bi-search me-1"></i> 搜索
+                </button>
+            </div>
+        </form>
+        <div class="mt-3">
+            <span class="text-muted small">热门搜索: </span>
+            {% for kw in ['周杰伦', '五月天', '演唱会', '音乐节', '陈奕迅'] %}
+            <a href="{{ url_for('search', keyword=kw, mode='sample') }}"
+               class="badge bg-secondary text-decoration-none mx-1">
+                {{ kw }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 演示结果数据预览 -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h4 class="mb-0">
+                    <i class="bi bi-bar-chart-fill text-success"></i> 示例数据图表预览
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="demoPriceChart" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h4 class="mb-0">
+                    <i class="bi bi-stars text-warning"></i> 统计数据
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">演出总数</h6>
+                    <h2 class="text-gradient fw-bold">{{ result.get('events', [])|length }}</h2>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">票价档数</h6>
+                    <h2 class="text-gradient fw-bold">{{ result.get('summary', {}).get('total_tickets', 0) }}</h2>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">平均票价</h6>
+                    <h2 class="text-gradient fw-bold">¥{{ result.get('summary', {}).get('avg_price', 0) }}</h2>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">最低票价</h6>
+                    <h2 class="text-gradient fw-bold text-danger">¥{{ result.get('summary', {}).get('min_price', 0) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 功能介绍卡片 -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-primary mb-3">
+                <i class="bi bi-search text-white fs-4"></i>
+            </div>
+            <h5 class="mb-3">多平台数据采集</h5>
+            <p class="text-muted small mb-0">
+                同时从大麦网、猫眼演出等主流售票平台采集演出信息与票价数据，
+                为您提供全面的演出信息。
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-success mb-3">
+                <i class="bi bi-arrow-left-right text-white fs-4"></i>
+            </div>
+            <h5 class="mb-3">智能票价对比</h5>
+            <p class="text-muted small mb-0">
+                同一场演出跨平台对比票价，综合考虑票价、平台、座次、在售状态等因素，
+                智能推荐最优购票方案。
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-warning mb-3">
+                <i class="bi bi-graph-up text-white fs-4"></i>
+            </div>
+            <h5 class="mb-3">数据可视化</h5>
+            <p class="text-muted small mb-0">
+                提供票价对比柱状图、平台分布饼图、城市分布散点图等多种数据可视化方式，
+                帮助您快速洞察市场行情。
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 演示比价结果表格 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h4 class="mb-0">
+            <i class="bi bi-table text-primary"></i> 演示比价结果
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>演出</th>
+                        <th>城市</th>
+                        <th>最低票价</th>
+                        <th>最低平台</th>
+                        <th>可购平台</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comp in result.get('comparison', [])[:10] %}
+                    <tr>
+                        <td class="fw-bold">{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ comp.get('event_title', '')[:30] }}</td>
+                        <td>{{ comp.get('city', '') }}</td>
+                        <td><span class="text-danger fw-bold">¥{{ comp.get('min_price', 0)|int }}</span></td>
+                        <td><span class="badge bg-primary">{{ comp.get('min_price_platform', '') }}</span></td>
+                        <td>
+                            {% for platform in comp.get('platforms_with_data', []) %}
+                            <span class="badge bg-secondary me-1">{{ platform }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 使用说明 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h4 class="mb-0">
+            <i class="bi bi-book text-info"></i> 使用说明
+        </h4>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <h5 class="text-primary mb-2">1. 搜索演出</h5>
+                        <p class="text-muted small mb-0">在顶部搜索框输入关键词（明星名字、演出名称等），可选城市过滤，点击搜索按钮。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <h5 class="text-success mb-2">2. 查看对比</h5>
+                        <p class="text-muted small mb-0">查看搜索结果，包含各平台票价信息、场馆位置、演出日期等详细数据。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <h5 class="text-warning mb-2">3. 智能推荐</h5>
+                        <p class="text-muted small mb-0">根据比价结果，查看系统智能推荐的最优购票方案，选择最合适的平台购票。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 演示用柱状图
+    const events = {{ result.get('events', [])|tojson|safe }};
+
+    if (events.length > 0) {
+        const topEvents = events.slice(0, 10);
+        const demoChart = echarts.init(document.getElementById('demoPriceChart'));
+        demoChart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    return `<strong>${topEvents[params[0].dataIndex].title.substring(0, 15)}</strong><br/>
+                            城市: ${topEvents[params[0].dataIndex].city}<br/>
+                            最低票价: ¥${params[0].value}`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: topEvents.map(function(e) {
+                    return (e.title || '未知').substring(0, 15);
+                }),
+                axisLabel: { rotate: 30, interval: 0, fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value',
+                name: '票价 (¥)',
+                axisLabel: { formatter: '¥{value}' }
+            },
+            series: [{
+                name: '最低票价',
+                type: 'bar',
+                data: topEvents.map(function(e) { return e.min_price || 0; }),
+                itemStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [
+                            { offset: 0, color: '#f093fb' },
+                            { offset: 1, color: '#f5576c' }
+                        ]
+                    },
+                    borderRadius: [8, 8, 0, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '¥{c}'
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { demoChart.resize(); });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- 搜索区 -->
+<div class="search-hero">
+    <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+        <div class="card-body p-5">
+            <h1 class="text-center mb-2">
+                <span class="text-gradient fw-bold">🎫 票多多</span>
+            </h1>
+            <p class="text-center text-muted mb-4">演唱会票价智能比价 · 开票状态追踪 · 跨平台对比</p>
+
+            <!-- 搜索表单 -->
+            <form action="{{ url_for('search') }}" method="POST" class="mt-4" id="searchForm">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-primary text-white border-primary">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" name="keyword"
+                                   placeholder="输入关键词，如：周杰伦、五月天、演唱会..."
+                                   value="{{ request.form.keyword }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-geo-alt"></i>
+                            </span>
+                            <input type="text" class="form-control" name="city"
+                                   placeholder="城市（可选）"
+                                   value="{{ request.form.city }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select form-select-lg" name="mode">
+                            <option value="auto">自动模式</option>
+                            <option value="sample">示例数据</option>
+                            <option value="real">真实采集</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <span class="text-muted small">快速搜索: </span>
+                    {% for kw in ['周杰伦', '五月天', '演唱会', '音乐节'] %}
+                    <a href="{{ url_for('search', keyword=kw) }}" class="badge bg-secondary text-decoration-none mx-1 quick-search">
+                        {{ kw }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-4 mb-5 mt-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-1 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-music-note-list fs-4"></i>
+                <span class="stat-label ms-2">演出总数</span>
+            </div>
+            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('event_count', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-2 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-ticket fs-4"></i>
+                <span class="stat-label ms-2">票价档位</span>
+            </div>
+            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('ticket_count', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-geo-alt fs-4"></i>
+                <span class="stat-label ms-2">覆盖城市</span>
+            </div>
+            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('city_count', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-4 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-globe fs-4"></i>
+                <span class="stat-label ms-2">售票平台</span>
+            </div>
+            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('platform_count', 0) }}</h2>
+        </div>
+    </div>
+</div>
+
+<!-- 示例演出列表 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h3 class="mb-0">
+            <i class="bi bi-stars text-primary"></i> 示例数据预览 - {{ sample_data.get('keyword', '') }}
+        </h3>
+        <p class="text-muted small mt-2 mb-0">
+            <i class="bi bi-clock"></i> 搜索时间: {{ sample_data.get('search_time', '') }}
+            <span class="mx-3">|</span>
+            <i class="bi bi-info-circle"></i> 共 {{ sample_data.get('events')|length }} 场演出
+        </p>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for event in sample_data.get('events', [])[:6] %}
+            <div class="col-md-6">
+                <div class="event-card h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0 fw-bold">{{ event.get('title', '未知演出') }}</h5>
+                        <span class="badge bg-primary rounded-pill">{{ event.get('source_platform', '') }}</span>
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <i class="bi bi-person-circle me-1"></i>{{ event.get('artist', '') }}
+                        <span class="mx-2">|</span>
+                        <i class="bi bi-geo-alt me-1"></i>{{ event.get('city', '') }}
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <i class="bi bi-geo-alt-fill me-1"></i>{{ event.get('venue', '') }}
+                        <span class="mx-2">|</span>
+                        <i class="bi bi-calendar-event me-1"></i>{{ event.get('date_str', '') }}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <div>
+                            <span class="fw-bold text-danger fs-5">
+                                ¥{{ event.get('min_price', 0) }}
+                            </span>
+                            <small class="text-muted">起</small>
+                        </div>
+                        {% if event.get('min_price', 0) > 0 %}
+                        <span class="badge bg-success rounded-pill">
+                            <i class="bi bi-check-circle-fill me-1"></i>可查询
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning rounded-pill">
+                            <i class="bi bi-exclamation-triangle me-1"></i>待定
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 比价结果 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h3 class="mb-0">
+            <i class="bi bi-bar-chart-2-fill text-success"></i> 智能比价结果
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>演出</th>
+                        <th>城市</th>
+                        <th>最低票价</th>
+                        <th>最低平台</th>
+                        <th>可购平台</th>
+                        <th>推荐</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comp in sample_data.get('comparison', [])[:8] %}
+                    <tr>
+                        <td class="fw-semibold">{{ comp.get('event_title', '') }}</td>
+                        <td>{{ comp.get('city', '') }}</td>
+                        <td><span class="text-danger fw-bold">¥{{ comp.get('min_price', 0)|int }}</span></td>
+                        <td>
+                            <span class="badge bg-primary">{{ comp.get('min_price_platform', '') }}</span>
+                        </td>
+                        <td>
+                            {% for platform in comp.get('platforms_with_data', []) %}
+                            <span class="badge bg-secondary me-1">{{ platform }}</span>
+                            {% endfor %}
+                        </td>
+                        <td class="small">{{ comp.get('recommendation', '').split('\n')[0] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 功能说明 -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-primary">
+                <i class="bi bi-search text-white fs-3"></i>
+            </div>
+            <h5>多平台数据采集</h5>
+            <p class="text-muted small mb-0">同时从大麦网、猫眼演出等主流售票平台采集演出信息与票价数据</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-success">
+                <i class="bi bi-arrow-left-right text-white fs-3"></i>
+            </div>
+            <h5>智能票价对比</h5>
+            <p class="text-muted small mb-0">同一场演出跨平台对比，智能推荐性价比最高的购票方案</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-warning">
+                <i class="bi bi-graph-up text-white fs-3"></i>
+            </div>
+            <h5>价格趋势追踪</h5>
+            <p class="text-muted small mb-0">记录票价变化历史，观察价格走势，帮你找到最佳购票时机</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 快速搜索点击效果
+    document.querySelectorAll('.quick-search').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            const keyword = this.textContent.trim();
+            const form = document.getElementById('searchForm');
+            const input = form.querySelector('input[name="keyword"]');
+            input.value = keyword;
+            form.submit();
+        });
+    });
+</script>
+{% endblock %}

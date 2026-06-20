@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- 搜索结果标题 -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+            <div>
+                <h2 class="mb-2">
+                    <i class="bi bi-search text-primary me-2"></i>
+                    搜索结果: <span class="text-gradient">{{ keyword }}</span>
+                </h2>
+                <p class="text-muted mb-0">
+                    共找到 {{ result.get('events', [])|length }} 场演出
+                    {% if city %}
+                        · 城市: {{ city }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="mt-3 mt-md-0">
+                <a href="{{ url_for('export_data', format='csv', keyword=keyword) }}"
+                   class="btn btn-outline-success me-2">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> 导出 CSV
+                </a>
+                <a href="{{ url_for('export_data', format='json', keyword=keyword) }}"
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-code me-1"></i> 导出 JSON
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速统计 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-1 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-music-note-list fs-4"></i>
+                <span class="stat-label ms-2">演出</span>
+            </div>
+            <h2 class="stat-value">{{ result.get('events', [])|length }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-2 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-ticket fs-4"></i>
+                <span class="stat-label ms-2">票价档</span>
+            </div>
+            <h2 class="stat-value">
+                {{ result.get('summary', {}).get('ticket_count', 0) }}
+            </h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-cash fs-4"></i>
+                <span class="stat-label ms-2">最低价</span>
+            </div>
+            <h2 class="stat-value">¥{{ result.get('summary', {}).get('min_price', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-4 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-globe fs-4"></i>
+                <span class="stat-label ms-2">平台</span>
+            </div>
+            <h2 class="stat-value">{{ result.get('summary', {}).get('platform_count', 0) }}</h2>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区 -->
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart-fill text-primary"></i> 各演出最低票价对比
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="priceChart" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-pie-chart-fill text-success"></i> 各平台票价对比
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="platformChart" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 演出列表 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h3 class="mb-0">
+            <i class="bi bi-list-ul text-primary"></i> 演出详情列表
+        </h3>
+    </div>
+    <div class="card-body">
+        {% for event in result.get('events', []) %}
+        <div class="event-card mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="mb-0 fw-bold">{{ event.get('title', '未知演出') }}</h5>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-primary rounded-pill">{{ event.get('source_platform', '') }}</span>
+                    {% if event.get('min_price', 0) > 0 %}
+                    <span class="badge bg-success rounded-pill">可查询</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="text-muted mb-1 small">
+                        <i class="bi bi-person-circle me-1"></i>{{ event.get('artist', '') }}
+                        <span class="mx-2">|</span>
+                        <i class="bi bi-geo-alt me-1"></i>{{ event.get('city', '') }}
+                    </p>
+                    <p class="text-muted mb-1 small">
+                        <i class="bi bi-building me-1"></i>{{ event.get('venue', '') }}
+                    </p>
+                    <p class="text-muted mb-0 small">
+                        <i class="bi bi-calendar-event me-1"></i>{{ event.get('date_str', '') }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-end">
+                        <p class="mb-1">
+                            <span class="text-muted small">票价范围:</span>
+                            <span class="text-danger fw-bold fs-5">
+                                ¥{{ event.get('min_price', 0) }} - ¥{{ event.get('max_price', 0) }}
+                            </span>
+                        </p>
+                        <p class="mb-0 small text-muted">
+                            共 {{ event.get('tickets', [])|length }} 个票价档位
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- 票价详情 -->
+            {% if event.get('tickets', []) %}
+            <div class="mt-3 pt-3 border-top">
+                <p class="text-muted small mb-2">票价详情:</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for ticket in event.get('tickets', []) %}
+                    <span class="ticket-badge">
+                        <span class="platform-badge">{{ ticket.get('platform', '')[:2] }}</span>
+                        ¥{{ ticket.get('price', 0)|int }}
+                        <small class="text-muted">{{ ticket.get('seat_type', '') }}</small>
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 比价结果表格 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h3 class="mb-0">
+            <i class="bi bi-bar-chart-2-fill text-success"></i> 智能比价分析
+        </h3>
+        <p class="text-muted small mt-2 mb-0">根据票价、平台、座次等多维度综合推荐</p>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>演出</th>
+                        <th>城市</th>
+                        <th>场馆</th>
+                        <th>最低票价</th>
+                        <th>最低平台</th>
+                        <th>可购平台</th>
+                        <th>推荐建议</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comp in result.get('comparison', []) %}
+                    <tr>
+                        <td class="fw-bold">{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ comp.get('event_title', '') }}</td>
+                        <td>{{ comp.get('city', '') }}</td>
+                        <td>{{ comp.get('venue', '') }}</td>
+                        <td><span class="text-danger fw-bold">¥{{ comp.get('min_price', 0)|int }}</span></td>
+                        <td><span class="badge bg-primary">{{ comp.get('min_price_platform', '') }}</span></td>
+                        <td>
+                            {% for platform in comp.get('platforms_with_data', []) %}
+                            <span class="badge bg-secondary me-1">{{ platform }}</span>
+                            {% endfor %}
+                        </td>
+                        <td class="small text-success">
+                            <i class="bi bi-lightbulb-fill me-1"></i>{{ comp.get('recommendation', '').split('\n')[0] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 准备图表数据
+    const events = {{ result.get('events', [])|tojson|safe }};
+    const visualization = {{ result.get('visualization', {})|tojson|safe }};
+
+    // 柱状图 - 最低票价对比
+    const prices = events.slice(0, 10).map(function(e) {
+        return {
+            name: e.title ? e.title.substring(0, 15) : '未知',
+            value: e.min_price || 0,
+            city: e.city || '',
+            venue: e.venue || ''
+        };
+    });
+
+    // ECharts 柱状图
+    if (prices.length > 0) {
+        const priceChart = echarts.init(document.getElementById('priceChart'));
+        priceChart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                formatter: function(params) {
+                    const p = prices[params[0].dataIndex];
+                    return `<strong>${p.name}</strong><br/>城市: ${p.city}<br/>最低票价: ¥${p.value}`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: prices.map(p => p.name),
+                axisLabel: {
+                    rotate: 30,
+                    interval: 0,
+                    fontSize: 11
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '票价 (¥)',
+                axisLabel: { formatter: '¥{value}' }
+            },
+            series: [{
+                name: '最低票价',
+                type: 'bar',
+                data: prices.map(p => p.value),
+                itemStyle: {
+                    color: function(params) {
+                        const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+                                        '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#5470c6'];
+                        return colors[params.dataIndex % colors.length];
+                    },
+                    borderRadius: [8, 8, 0, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '¥{c}'
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { priceChart.resize(); });
+    }
+
+    // 平台饼图
+    if (visualization && visualization.platform_pie_chart) {
+        const platformChart = echarts.init(document.getElementById('platformChart'));
+        const pieData = visualization.platform_pie_chart.series ?
+            visualization.platform_pie_chart.series[0].data : [];
+
+        platformChart.setOption({
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: ¥{c} ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                top: 'middle'
+            },
+            series: [{
+                name: '平台均价',
+                type: 'pie',
+                radius: ['35%', '70%'],
+                center: ['55%', '50%'],
+                data: pieData,
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                itemStyle: {
+                    borderRadius: 8,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { platformChart.resize(); });
+    } else {
+        // 备用 - 计算各平台平均价
+        const platformPrices = {};
+        events.forEach(function(e) {
+            if (e.tickets) {
+                e.tickets.forEach(function(t) {
+                    if (!platformPrices[t.platform]) {
+                        platformPrices[t.platform] = { prices: [], count: 0 };
+                    }
+                    platformPrices[t.platform].prices.push(t.price);
+                    platformPrices[t.platform].count += 1;
+                });
+            }
+        });
+
+        const pieData = Object.keys(platformPrices).map(function(p) {
+            const avg = platformPrices[p].prices.reduce((a, b) => a + b, 0) / platformPrices[p].prices.length;
+            return { name: p, value: Math.round(avg) };
+        });
+
+        if (pieData.length > 0) {
+            const platformChart = echarts.init(document.getElementById('platformChart'));
+            platformChart.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: 平均 ¥{c}'
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    top: 'middle'
+                },
+                series: [{
+                    name: '平台均价',
+                    type: 'pie',
+                    radius: ['35%', '70%'],
+                    data: pieData,
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    },
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }
+                }]
+            });
+            window.addEventListener('resize', function() { platformChart.resize(); });
+        }
+    }
+</script>
+{% endblock %}

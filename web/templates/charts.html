@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <h2 class="mb-0">
+            <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>
+            数据可视化图表
+        </h2>
+        <p class="text-muted mb-0 mt-2">关键词: <span class="text-gradient fw-bold">{{ keyword }}</span></p>
+    </div>
+</div>
+
+<!-- 汇总统计 -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-1 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-music-note-list fs-4"></i>
+                <span class="stat-label ms-2">演出总数</span>
+            </div>
+            <h2 class="stat-value">{{ result.get('summary', {}).get('total_events', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-2 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-ticket fs-4"></i>
+                <span class="stat-label ms-2">票价档数</span>
+            </div>
+            <h2 class="stat-value">{{ result.get('summary', {}).get('total_tickets', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-3 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-cash-stack fs-4"></i>
+                <span class="stat-label ms-2">平均票价</span>
+            </div>
+            <h2 class="stat-value">¥{{ result.get('summary', {}).get('avg_price', 0) }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-4 h-100">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-geo-alt fs-4"></i>
+                <span class="stat-label ms-2">覆盖城市</span>
+            </div>
+            <h2 class="stat-value">{{ result.get('summary', {}).get('city_count', 0) }}</h2>
+        </div>
+    </div>
+</div>
+
+<!-- 图表 -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart-fill text-primary"></i> 最低票价对比
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="priceBarChart" style="height: 380px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-pie-chart-fill text-success"></i> 平台票价分布
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="platformPieChart" style="height: 380px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-diagram-3-fill text-warning"></i> 票价分布散点图
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="priceScatterChart" style="height: 380px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-building-fill text-danger"></i> 各城市演出数量
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="cityChart" style="height: 380px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据表格 -->
+<div class="card shadow-sm border-0 rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pb-0">
+        <h3 class="mb-0">
+            <i class="bi bi-table text-primary"></i> 原始数据明细
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>演出</th>
+                        <th>艺人</th>
+                        <th>城市</th>
+                        <th>场馆</th>
+                        <th>日期</th>
+                        <th>票价范围</th>
+                        <th>平台</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in result.get('events', []) %}
+                    <tr>
+                        <td class="fw-bold">{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ event.get('title', '')[:25] }}{{ '...' if event.get('title', '')|length > 25 else '' }}</td>
+                        <td>{{ event.get('artist', '') }}</td>
+                        <td>{{ event.get('city', '') }}</td>
+                        <td class="small">{{ event.get('venue', '') }}</td>
+                        <td class="small">{{ event.get('date_str', '')[:10] }}</td>
+                        <td><span class="text-danger fw-bold">¥{{ event.get('min_price', 0) }}</span></td>
+                        <td>
+                            <span class="badge bg-primary">{{ event.get('source_platform', '') }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const events = {{ result.get('events', [])|tojson|safe }};
+
+    // 1. 最低票价柱状图
+    if (events.length > 0) {
+        const topEvents = events.slice(0, 10);
+        const priceChart = echarts.init(document.getElementById('priceBarChart'));
+        priceChart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: topEvents.map(function(e) {
+                    return (e.title || '未知').substring(0, 15);
+                }),
+                axisLabel: { rotate: 35, interval: 0, fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value',
+                name: '票价 (¥)',
+                axisLabel: { formatter: '¥{value}' }
+            },
+            series: [{
+                name: '最低票价',
+                type: 'bar',
+                data: topEvents.map(function(e) { return e.min_price || 0; }),
+                itemStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [
+                            { offset: 0, color: '#667eea' },
+                            { offset: 1, color: '#764ba2' }
+                        ]
+                    },
+                    borderRadius: [8, 8, 0, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '¥{c}'
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { priceChart.resize(); });
+    }
+
+    // 2. 平台饼图
+    if (events.length > 0) {
+        const platformData = {};
+        events.forEach(function(e) {
+            if (e.tickets) {
+                e.tickets.forEach(function(t) {
+                    if (!platformData[t.platform]) {
+                        platformData[t.platform] = { total: 0, count: 0 };
+                    }
+                    platformData[t.platform].total += t.price;
+                    platformData[t.platform].count += 1;
+                });
+            }
+        });
+
+        const pieData = Object.keys(platformData).map(function(p) {
+            return {
+                name: p,
+                value: Math.round(platformData[p].total / platformData[p].count)
+            };
+        });
+
+        if (pieData.length > 0) {
+            const platformChart = echarts.init(document.getElementById('platformPieChart'));
+            platformChart.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: 平均 ¥{c}'
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    top: 'middle'
+                },
+                series: [{
+                    name: '平台均价',
+                    type: 'pie',
+                    radius: ['40%', '75%'],
+                    center: ['60%', '50%'],
+                    data: pieData,
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    },
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 3
+                    }
+                }]
+            });
+            window.addEventListener('resize', function() { platformChart.resize(); });
+        }
+    }
+
+    // 3. 票价散点图
+    if (events.length > 0) {
+        const scatterData = [];
+        events.slice(0, 10).forEach(function(e, idx) {
+            if (e.tickets) {
+                e.tickets.forEach(function(t) {
+                    scatterData.push({
+                        name: (e.title || '').substring(0, 15),
+                        value: [idx, t.price],
+                        platform: t.platform
+                    });
+                });
+            }
+        });
+
+        const scatterChart = echarts.init(document.getElementById('priceScatterChart'));
+        scatterChart.setOption({
+            tooltip: {
+                trigger: 'item',
+                formatter: function(params) {
+                    return `<strong>${params.data.name}</strong><br/>票价: ¥${params.data.value[1]}<br/>平台: ${params.data.platform || '未知'}`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: events.slice(0, 10).map(function(e) {
+                    return (e.title || '未知').substring(0, 12);
+                }),
+                axisLabel: { rotate: 30, interval: 0, fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value',
+                name: '票价 (¥)',
+                axisLabel: { formatter: '¥{value}' }
+            },
+            series: [{
+                type: 'scatter',
+                symbolSize: 18,
+                data: scatterData,
+                itemStyle: {
+                    color: function(params) {
+                        const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666',
+                                        '#73c0de', '#3ba272', '#fc8452', '#9a60b4'];
+                        const platform = params.data.platform || '';
+                        return colors[platform.charCodeAt(0) % colors.length];
+                    },
+                    opacity: 0.7
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { scatterChart.resize(); });
+    }
+
+    // 4. 城市演出数量分布
+    if (events.length > 0) {
+        const cityCount = {};
+        events.forEach(function(e) {
+            const city = e.city || '未知';
+            cityCount[city] = (cityCount[city] || 0) + 1;
+        });
+
+        const sortedCities = Object.entries(cityCount)
+            .sort(function(a, b) { return b[1] - a[1]; })
+            .slice(0, 10);
+
+        const cityChart = echarts.init(document.getElementById('cityChart'));
+        cityChart.setOption({
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: '{b}: {c} 场'
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '5%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                name: '演出数量',
+                axisLabel: { formatter: '{value} 场' }
+            },
+            yAxis: {
+                type: 'category',
+                data: sortedCities.map(c => c[0]).reverse()
+            },
+            series: [{
+                type: 'bar',
+                data: sortedCities.map(c => c[1]).reverse(),
+                itemStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0, y: 0, x2: 1, y2: 0,
+                        colorStops: [
+                            { offset: 0, color: '#36d1dc' },
+                            { offset: 1, color: '#5b86e5' }
+                        ]
+                    },
+                    borderRadius: [0, 8, 8, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{c} 场'
+                }
+            }]
+        });
+        window.addEventListener('resize', function() { cityChart.resize(); });
+    }
+</script>
+{% endblock %}
