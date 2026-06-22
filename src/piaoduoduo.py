@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from .collectors.damai import DamaiCollector
 from .collectors.maoyan import MaoyanCollector
 from .collectors.piaoxingqiu import PiaoxingqiuCollector
+from .collectors.ticketmaster import TicketmasterCollector
 from .collectors.social_media import SocialMediaCollector
 from .cleaner import DataCleaner
 from .comparator import PriceComparator
@@ -25,6 +26,7 @@ class PiaoDuoDuo:
         self.damai = DamaiCollector(mode=mode)
         self.maoyan = MaoyanCollector(mode=mode)
         self.piaoxingqiu = PiaoxingqiuCollector(mode=mode)
+        self.ticketmaster = TicketmasterCollector(mode=mode)
         self.social_media = SocialMediaCollector(mode=mode)
         self.cleaner = DataCleaner()
         self.comparator = PriceComparator()
@@ -32,6 +34,7 @@ class PiaoDuoDuo:
         self._events_cache = []
         self._last_search_keyword = ""
         self._last_mode = mode
+        self._is_foreign_search = False
 
     # ---------- 核心功能: 搜索与采集 ----------
 
@@ -44,16 +47,24 @@ class PiaoDuoDuo:
         is_foreign = self.social_media.is_foreign_artist(keyword)
 
         if is_foreign:
-            # 国际艺人：只走社交媒体/官方渠道，不调国内平台（因为他们不会在大陆开演唱会）
-            print(f"  [检测] '{keyword}' 识别为国际艺人，仅查询社交媒体与官方渠道...")
+            # 国际艺人：走 Ticketmaster + 社交媒体，不调国内平台（他们不会在大陆开演唱会）
+            print(f"  [检测] '{keyword}' 识别为国际艺人，通过 Ticketmaster + 社交媒体查询...")
+            try:
+                tm_events = self.ticketmaster.search(keyword, city=city, limit=limit)
+                print(f"  - Ticketmaster: 采集到 {len(tm_events)} 场演出")
+                all_events.extend(tm_events)
+                mode_used.append("Ticketmaster")
+            except Exception as e:
+                print(f"  - Ticketmaster: 采集失败 ({e})")
             try:
                 social_events = self.social_media.search(keyword, city=city, limit=limit)
-                print(f"  - 社交媒体/国际: 采集到 {len(social_events)} 场演出")
-                all_events.extend(social_events)
-                mode_used.append("社交媒体/官方渠道")
+                if social_events:
+                    print(f"  - 社交媒体/国际: 采集到 {len(social_events)} 场演出")
+                    all_events.extend(social_events)
+                    mode_used.append("社交媒体")
             except Exception as e:
                 print(f"  - 社交媒体: 采集失败 ({e})")
-            print(f"  - [提示] '{keyword}' 不会在中国大陆开演唱会，购票需访问官方渠道（Ticketmaster/AXS 等）")
+            print(f"  - [提示] '{keyword}' 不会在中国大陆开演唱会，购票需访问 Ticketmaster / AXS 等官方渠道")
         else:
             # 国内艺人/泛关键词：走国内三大平台
             platform_sources = [
@@ -395,19 +406,20 @@ class PiaoDuoDuo:
 
     def load_sample_data(self, keyword: str = "周杰伦") -> Dict:
         print(f"[票多多] 加载示例数据，关键词: {keyword}")
-        # 先判断是否国际艺人
         is_foreign = self.social_media.is_foreign_artist(keyword)
         if is_foreign:
-            # 国际艺人示例数据：只启用社交媒体，不给国内假数据
-            self.damai.mode = "real"  # 关闭 sample
+            # 国际艺人：Ticketmaster 示例数据 + 关闭国内平台
+            self.damai.mode = "real"
             self.maoyan.mode = "real"
             self.piaoxingqiu.mode = "real"
-            self.social_media.mode = "sample"
+            self.ticketmaster.mode = "sample"
+            self.social_media.mode = "real"
         else:
             self.damai.mode = "sample"
             self.maoyan.mode = "sample"
             self.piaoxingqiu.mode = "sample"
-            self.social_media.mode = "real"  # 关闭社交媒体（国内艺人不需要）
+            self.ticketmaster.mode = "real"
+            self.social_media.mode = "real"
         result = self.run_full_workflow(keyword, limit=15)
         result['is_sample_data'] = True
         result['message'] = "这是示例数据，用于功能演示。切换到「自动模式」或「真实采集」可获取真实数据。"

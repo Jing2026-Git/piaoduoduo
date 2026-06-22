@@ -1,0 +1,27 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install flask requests beautifulsoup4 lxml gunicorn
+      
+      - name: Deploy to Railway
+        uses: railway-app/github-action@v1
+        with:
+          api-key: ${{ secrets.RAILWAY_API_KEY }}
+          project-id: ${{ secrets.RAILWAY_PROJECT_ID }}

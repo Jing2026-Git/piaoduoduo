@@ -73,6 +73,7 @@ def search():
     pdd.damai.mode = mode
     pdd.maoyan.mode = mode
     pdd.piaoxingqiu.mode = mode
+    pdd.ticketmaster.mode = mode
     pdd.social_media.mode = mode
 
     # 示例模式：使用用户输入的关键词而非固定的周杰伦

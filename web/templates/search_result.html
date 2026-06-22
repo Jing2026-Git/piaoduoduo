@@ -109,18 +109,35 @@
         <div class="stat-card stat-card-3 h-100">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-cash fs-4"></i>
-                <span class="stat-label ms-2">最低价</span>
+                <span class="stat-label ms-2">最低票价</span>
             </div>
-            <h2 class="stat-value">¥{{ result.get('summary', {}).get('min_price', 0) }}</h2>
+            <h2 class="stat-value">
+                {% if result.get('is_foreign_artist') %}
+                    <span class="text-muted small">多币种</span>
+                {% else %}
+                    ¥{{ result.get('summary', {}).get('min_price', 0) }}
+                {% endif %}
+            </h2>
+            {% if result.get('is_foreign_artist') %}
+            <p class="text-muted small mb-0">不同城市货币不同</p>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-3">
         <div class="stat-card stat-card-4 h-100">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-globe fs-4"></i>
-                <span class="stat-label ms-2">平台</span>
+                <span class="stat-label ms-2">覆盖城市</span>
             </div>
-            <h2 class="stat-value">{{ result.get('summary', {}).get('platform_count', 0) }}</h2>
+            <h2 class="stat-value">
+                {% set cities = [] %}
+                {% for e in result.get('events', []) %}
+                    {% if e.get('city') and e.get('city') not in cities %}
+                        {% set _ = cities.append(e.get('city')) %}
+                    {% endif %}
+                {% endfor %}
+                {{ cities|length }}
+            </h2>
         </div>
     </div>
 </div>
@@ -195,7 +212,15 @@
                         <p class="mb-1">
                             <span class="text-muted small">票价范围:</span>
                             <span class="text-danger fw-bold fs-5">
-                                ¥{{ event.get('min_price', 0) }} - ¥{{ event.get('max_price', 0) }}
+                                {% set first_ticket = event.get('tickets', [{}])[0] %}
+                                {% set note = first_ticket.get('note', '') if first_ticket else '' %}
+                                {% if note and '货币: ' in note %}
+                                    {% set curr = note.split('货币: ')[1].split(')')[0] %}
+                                    {{ curr.split('(')[0] }}{{ first_ticket.get('price', 0)|int }}
+                                {% else %}
+                                    ¥{{ first_ticket.get('price', 0)|int if first_ticket else event.get('min_price', 0)|int }}
+                                {% endif %}
+                                起
                             </span>
                         </p>
                         <p class="mb-0 small text-muted">
@@ -207,13 +232,41 @@
             <!-- 票价详情 -->
             {% if event.get('tickets', []) %}
             <div class="mt-3 pt-3 border-top">
-                <p class="text-muted small mb-2">票价详情:</p>
+                <p class="text-muted small mb-2">票价详情:
+                    <span class="text-secondary">
+                        {% for ticket in event.get('tickets', [])[:1 %}
+                            {% if ticket.get('note', '') and '货币' in ticket.get('note', '') %}
+                                ({{ ticket.get('note', '').split('货币: ')[1] }})
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </p>
                 <div class="d-flex flex-wrap gap-2">
                     {% for ticket in event.get('tickets', []) %}
-                    <span class="ticket-badge">
+                    {% set note_text = ticket.get('note', '') if ticket else '' %}
+                    {% set currency_sym = '' %}
+                    {% set currency_name = '' %}
+                    {% if note_text and '货币: ' in note_text %}
+                        {% set curr_parts = note_text.split('货币: ')[1].split(')') %}
+                        {% set currency_name = curr_parts[0] if curr_parts else '' %}
+                        {% set paren_idx = currency_name.find('(') %}
+                        {% if paren_idx >= 0 %}
+                            {% set currency_sym = currency_name[paren_idx+1:] %}
+                            {% set currency_name = currency_name[:paren_idx] %}
+                        {% endif %}
+                    {% endif %}
+                    <span class="ticket-badge {% if ticket.get('ticket_status', '') == '售罄' %}opacity-50{% endif %}">
                         <span class="platform-badge">{{ ticket.get('platform', '')[:2] }}</span>
-                        ¥{{ ticket.get('price', 0)|int }}
-                        <small class="text-muted">{{ ticket.get('seat_type', '') }}</small>
+                        {% if currency_sym %}
+                            <span class="fw-bold text-danger">{{ currency_sym }}{{ ticket.get('price', 0)|int }}</span>
+                            <small class="text-secondary">{{ currency_name }}</small>
+                        {% else %}
+                            ¥{{ ticket.get('price', 0)|int }}
+                            <small class="text-muted">{{ ticket.get('seat_type', '') }}</small>
+                        {% endif %}
+                        {% if ticket.get('ticket_status', '') == '售罄' %}
+                            <small class="text-danger ms-1">[售罄]</small>
+                        {% endif %}
                     </span>
                     {% endfor %}
                 </div>
@@ -257,7 +310,15 @@
         <h3 class="mb-0">
             <i class="bi bi-bar-chart-2-fill text-success"></i> 智能比价分析
         </h3>
+        {% if result.get('is_foreign_artist') %}
+        <p class="text-danger small mt-2 mb-0">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            注意：国际演出票价使用当地货币，各城市价格不可直接比较。
+            建议根据购票地货币换算后再决定。
+        </p>
+        {% else %}
         <p class="text-muted small mt-2 mb-0">根据票价、平台、座次等多维度综合推荐</p>
+        {% endif %}
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -268,7 +329,7 @@
                         <th>演出</th>
                         <th>城市</th>
                         <th>场馆</th>
-                        <th>最低票价</th>
+                        <th>最低票价{% if result.get('is_foreign_artist') %} <small class="fw-normal text-secondary">(当地货币)</small>{% endif %}</th>
                         <th>最低平台</th>
                         <th>可购平台</th>
                         <th>推荐建议</th>
@@ -279,7 +340,14 @@
                     <tr>
                         <td class="fw-bold">{{ loop.index }}</td>
                         <td class="fw-semibold">{{ comp.get('event_title', '') }}</td>
-                        <td>{{ comp.get('city', '') }}</td>
+                        <td>
+                            {{ comp.get('city', '') }}
+                            {% if result.get('is_foreign_artist') %}
+                                {% set city_currency = {'东京': 'JPY', '大阪': 'JPY', '香港': 'HKD', '新加坡': 'SGD', '曼谷': 'THB', '悉尼': 'AUD', '台北': 'TWD', '雅加达': 'IDR', '伦敦': 'GBP', '纽约': 'USD', '洛杉矶': 'USD', '巴黎': 'EUR'} %}
+                                {% set curr = city_currency.get(comp.get('city', ''), 'USD') %}
+                                <span class="badge bg-light text-dark ms-1" style="font-size: 0.65rem;">{{ curr }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ comp.get('venue', '') }}</td>
                         <td><span class="text-danger fw-bold">¥{{ comp.get('min_price', 0)|int }}</span></td>
                         <td><span class="badge bg-primary">{{ comp.get('min_price_platform', '') }}</span></td>
