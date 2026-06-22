@@ -28,12 +28,22 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('charts') }}">
+                        <a class="nav-link" href="{{ url_for('watchlist_page') }}">
+                            <i class="bi bi-heart-fill"></i> 我的关注
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('sale_calendar') }}">
+                            <i class="bi bi-calendar-check"></i> 开票日历
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('charts_page') }}">
                             <i class="bi bi-bar-chart-line"></i> 数据图表
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('demo') }}">
+                        <a class="nav-link" href="{{ url_for('demo_page') }}">
                             <i class="bi bi-play-circle"></i> 功能演示
                         </a>
                     </li>

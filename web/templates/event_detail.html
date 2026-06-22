@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ event.title }} - 票价编辑 - 票多多{% endblock %}
+
+{% block content %}
+
+<!-- 演出信息卡片 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap">
+                    <div>
+                        <h1 class="mb-2">{{ event.title }}</h1>
+                        <p class="mb-1 text-muted">
+                            <i class="bi bi-person-circle"></i> {{ event.artist if event.artist else '—' }}
+                            &nbsp;·&nbsp;
+                            <i class="bi bi-geo-alt"></i> {{ event.city }}
+                            {% if event.venue %} · {{ event.venue }}{% endif %}
+                        </p>
+                        {% if event.date_str %}
+                        <p class="mb-1 text-muted">
+                            <i class="bi bi-calendar-event"></i> 演出时间：{{ event.date_str }}
+                        </p>
+                        {% endif %}
+                        {% if event.sale_time %}
+                        <p class="mb-1">
+                            <i class="bi bi-clock"></i> 开票时间：{{ event.sale_time[:10] }}
+                            {% if event.days_to_sale is not none %}
+                                <span class="badge {% if event.days_to_sale <= 3 %}bg-danger{% elif event.days_to_sale <= 7 %}bg-warning{% else %}bg-secondary{% endif %} ms-2">
+                                    {{ event.days_to_sale }} 天后
+                                </span>
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                        {% if event.source_platform %}
+                        <p class="mb-1 text-muted small">
+                            <i class="bi bi-box-arrow-up-right"></i> 来源：{{ event.source_platform }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if event.is_watching %}
+                            <form method="POST" action="{{ url_for('watchlist_remove') }}" class="d-inline">
+                                <input type="hidden" name="event_id" value="{{ event.event_id }}">
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="bi bi-heart-fill"></i> 已关注
+                                </button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('watchlist_add') }}" class="d-inline">
+                                <input type="hidden" name="event_id" value="{{ event.event_id }}">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-heart"></i> + 关注
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if event.description %}
+                <hr>
+                <p class="mb-0">{{ event.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 票价编辑 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-ticket-perforated-fill"></i> 票价信息
+                    {% if tickets and event.is_user_edited %}
+                        <span class="badge bg-success ms-2"><i class="bi bi-person-check"></i> 已手动编辑</span>
+                    {% endif %}
+                </h4>
+                <small class="text-muted">
+                    票多多为半自动模式，您可以根据官方公布的票价信息手动编辑各票档。
+                    票价编辑后，系统会根据您设置的数据进行比价分析。
+                </small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('tickets_edit') }}" id="ticketForm">
+                    <input type="hidden" name="event_id" value="{{ event.event_id }}">
+
+                    <!-- 现有票价 -->
+                    <div id="ticketRows" class="mb-3">
+                        {% if tickets %}
+                            {% for ticket in tickets %}
+                            <div class="row g-2 mb-2 align-items-center ticket-row">
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" name="price[]" placeholder="票价（元）" value="{{ ticket.price }}" min="0" step="1" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="seat_type[]" placeholder="座位类型（如 看台/内场/VIP）" value="{{ ticket.seat_type }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" name="ticket_status[]">
+                                        <option value="在售" {% if ticket.ticket_status == '在售' %}selected{% endif %}>在售</option>
+                                        <option value="已售罄" {% if ticket.ticket_status == '已售罄' %}selected{% endif %}>已售罄</option>
+                                        <option value="即将开抢" {% if ticket.ticket_status == '即将开抢' %}selected{% endif %}>即将开抢</option>
+                                        <option value="未开售" {% if ticket.ticket_status == '未开售' %}selected{% endif %}>未开售</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="platform[]" placeholder="售票平台（如 大麦/猫眼）" value="{{ ticket.platform }}">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="删除此票档">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- 默认空票档 -->
+                            <div class="row g-2 mb-2 align-items-center ticket-row">
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" name="price[]" placeholder="票价（元）" min="0" step="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="seat_type[]" placeholder="座位类型">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" name="ticket_status[]">
+                                        <option value="在售">在售</option>
+                                        <option value="已售罄">已售罄</option>
+                                        <option value="即将开抢">即将开抢</option>
+                                        <option value="未开售">未开售</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="platform[]" placeholder="售票平台">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 添加票档按钮 -->
+                    <button type="button" class="btn btn-outline-secondary mb-3" id="addRowBtn">
+                        <i class="bi bi-plus-circle"></i> 添加票档
+                    </button>
+
+                    <!-- 快捷模板 -->
+                    <div class="mb-4">
+                        <small class="text-muted d-block mb-2"><i class="bi bi-lightbulb"></i> 快捷模板：</small>
+                        <button type="button" class="btn btn-sm btn-outline-info me-2 template-btn" data-template="concert">
+                            演唱会（看台/内场/VIP）
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info me-2 template-btn" data-template="music">
+                            音乐节（单日/双日通票）
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info template-btn" data-template="simple">
+                            简单三档（低价/中价/高价）
+                        </button>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="reset" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save-fill"></i> 保存票价信息
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户备注/优先级设置 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">
+                <h4 class="mb-0"><i class="bi bi-chat-square-text"></i> 关注设置</h4>
+                <small class="text-muted">记录您的购票偏好，方便开票时快速参考。</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('watchlist_add') }}">
+                    <input type="hidden" name="event_id" value="{{ event.event_id }}">
+                    <div class="mb-3">
+                        <label class="form-label">备注（如：只想抢看台、预算 800 元）</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="输入您的购票备注...">{{ event.user_notes }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">优先级</label>
+                        <select class="form-select" name="priority">
+                            <option value="0" {% if not event.purchase_priority %}selected{% endif %}>普通关注</option>
+                            <option value="1" {% if event.purchase_priority == 1 %}selected{% endif %}>重点关注</option>
+                            <option value="2" {% if event.purchase_priority == 2 %}selected{% endif %}>必抢！</option>
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        {% if event.is_watching %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> 更新关注设置
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-heart-fill"></i> 关注此演出
+                            </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 添加票档行
+    document.getElementById('addRowBtn').addEventListener('click', function() {
+        addTicketRow('', '', '在售', '');
+    });
+
+    // 删除票档行
+    document.getElementById('ticketRows').addEventListener('click', function(e) {
+        if (e.target.closest('.remove-row')) {
+            const row = e.target.closest('.ticket-row');
+            row.remove();
+        }
+    });
+
+    // 快捷模板
+    document.querySelectorAll('.template-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const template = this.dataset.template;
+            clearTicketRows();
+
+            if (template === 'concert') {
+                addTicketRow('480', '看台', '在售', '大麦网');
+                addTicketRow('680', '看台', '在售', '大麦网');
+                addTicketRow('1280', '内场', '即将开抢', '大麦网');
+                addTicketRow('1980', 'VIP 内场', '即将开抢', '大麦网');
+            } else if (template === 'music') {
+                addTicketRow('380', '单日票', '在售', '猫眼');
+                addTicketRow('680', '双日通票', '在售', '猫眼');
+                addTicketRow('1280', '双日 VIP 通票', '即将开抢', '猫眼');
+            } else if (template === 'simple') {
+                addTicketRow('380', '低价区', '在售', '大麦网');
+                addTicketRow('780', '中价区', '在售', '大麦网');
+                addTicketRow('1280', '高价区', '即将开抢', '大麦网');
+            }
+        });
+    });
+});
+
+function clearTicketRows() {
+    const rows = document.querySelectorAll('.ticket-row');
+    rows.forEach(function(row) { row.remove(); });
+}
+
+function addTicketRow(price, seat_type, ticket_status, platform) {
+    const rowsContainer = document.getElementById('ticketRows');
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-2 align-items-center ticket-row';
+    row.innerHTML = `
+        <div class="col-md-2">
+            <input type="number" class="form-control" name="price[]" placeholder="票价（元）" value="${price}" min="0" step="1">
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="seat_type[]" placeholder="座位类型" value="${seat_type}">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="ticket_status[]">
+                <option value="在售" ${ticket_status === '在售' ? 'selected' : ''}>在售</option>
+                <option value="已售罄" ${ticket_status === '已售罄' ? 'selected' : ''}>已售罄</option>
+                <option value="即将开抢" ${ticket_status === '即将开抢' ? 'selected' : ''}>即将开抢</option>
+                <option value="未开售" ${ticket_status === '未开售' ? 'selected' : ''}>未开售</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="platform[]" placeholder="售票平台" value="${platform}">
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    rowsContainer.appendChild(row);
+}
+</script>
+{% endblock %}

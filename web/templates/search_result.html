@@ -19,13 +19,9 @@
                 </p>
             </div>
             <div class="mt-3 mt-md-0">
-                <a href="{{ url_for('export_data', format='csv', keyword=keyword) }}"
+                <a href="{{ url_for('export_csv', keyword=keyword) }}"
                    class="btn btn-outline-success me-2">
                     <i class="bi bi-file-earmark-spreadsheet me-1"></i> 导出 CSV
-                </a>
-                <a href="{{ url_for('export_data', format='json', keyword=keyword) }}"
-                   class="btn btn-outline-primary">
-                    <i class="bi bi-file-earmark-code me-1"></i> 导出 JSON
                 </a>
             </div>
         </div>
@@ -116,8 +112,8 @@
                 <h5 class="mb-0 fw-bold">{{ event.get('title', '未知演出') }}</h5>
                 <div class="d-flex gap-2">
                     <span class="badge bg-primary rounded-pill">{{ event.get('source_platform', '') }}</span>
-                    {% if event.get('min_price', 0) > 0 %}
-                    <span class="badge bg-success rounded-pill">可查询</span>
+                    {% if event.get('is_watching', False) %}
+                    <span class="badge bg-success rounded-pill"><i class="bi bi-heart-fill"></i> 已关注</span>
                     {% endif %}
                 </div>
             </div>
@@ -133,6 +129,10 @@
                     </p>
                     <p class="text-muted mb-0 small">
                         <i class="bi bi-calendar-event me-1"></i>{{ event.get('date_str', '') }}
+                        {% if event.get('sale_time', '') %}
+                        <span class="mx-2">|</span>
+                        <i class="bi bi-clock me-1"></i>{{ event.get('sale_time', '')[:10] }}开票
+                        {% endif %}
                     </p>
                 </div>
                 <div class="col-md-6">
@@ -164,6 +164,33 @@
                 </div>
             </div>
             {% endif %}
+            <!-- 操作按钮 -->
+            <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                <div class="small text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    票多多为半自动模式，票价数据由用户手动编辑后可精准比价
+                </div>
+                <div class="d-flex gap-2">
+                    {% if event.get('is_watching', False) %}
+                        <form method="POST" action="{{ url_for('watchlist_remove') }}" class="d-inline">
+                            <input type="hidden" name="event_id" value="{{ event.get('event_id', '') }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-heartbreak"></i> 取消关注
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('watchlist_add') }}" class="d-inline">
+                            <input type="hidden" name="event_id" value="{{ event.get('event_id', '') }}">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-heart-fill"></i> 关注
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{{ url_for('event_detail', event_id=event.get('event_id', '')) }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-pencil-square"></i> 编辑票价
+                    </a>
+                </div>
+            </div>
         </div>
         {% endfor %}
     </div>

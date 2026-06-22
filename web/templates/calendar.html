@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}开票日历 - 票多多{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="mb-0"><i class="bi bi-calendar-check-fill text-success"></i> 开票日历</h1>
+            <div class="text-muted">
+                未来 30 天内：<strong class="text-primary">{{ calendar.total_events }}</strong> 场开票
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 紧急提醒 -->
+{% if upcoming_sales %}
+<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+    <h5 class="alert-heading mb-2">
+        <i class="bi bi-bell-fill"></i> 7天内即将开票（{{ upcoming_sales|length }}场）
+    </h5>
+    <div class="row">
+        {% for item in upcoming_sales %}
+        <div class="col-md-4 mb-2">
+            <div class="card border-0 bg-light">
+                <div class="card-body py-2 px-3">
+                    <small class="text-muted">{{ item.title }}</small><br>
+                    <span class="badge bg-danger">
+                        {% if item.days_to_sale == 0 %}今天开票！
+                        {% elif item.days_to_sale == 1 %}明天开票
+                        {% else %}{{ item.days_to_sale }} 天后{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 日历视图 -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-calendar3"></i> 未来 30 天</h5>
+        <div class="row">
+            {% for day in calendar.dates %}
+            <div class="col-6 col-sm-4 col-md-3 mb-2">
+                <div class="card {% if day.events %}border-primary bg-light{% else %}border-muted{% endif %} h-100">
+                    <div class="card-body py-2 px-2">
+                        <small class="d-block text-muted fw-bold">
+                            {{ day.date }}
+                            <small class="text-muted">{{ day.weekday }}</small>
+                        </small>
+                        {% if day.events %}
+                        <div class="mt-2">
+                            {% for event in day.events %}
+                            <small class="d-block text-truncate mb-1" title="{{ event.title }}">
+                                <span class="badge bg-success">开票</span>
+                                {{ event.title[:15] }}{% if event.title|length > 15 %}...{% endif %}
+                            </small>
+                            {% endfor %}
+                        </div>
+                        <a href="{{ url_for('event_detail', event_id=day.events[0].event_id) }}" class="btn btn-sm btn-outline-primary mt-2 w-100">
+                            <i class="bi bi-pencil"></i> 设置票价
+                        </a>
+                        {% else %}
+                        <small class="text-muted d-block mt-2">—</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 说明卡片 -->
+<div class="mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle text-info"></i> 关于票价编辑</h6>
+                    <small class="text-muted">
+                        由于各大售票平台对实时数据有较强反爬保护，票多多采用<strong>半自动模式</strong>：
+                        <ul class="mt-2 mb-0 ps-3">
+                            <li>搜索发现感兴趣的演出</li>
+                            <li>将演出添加到"我的关注"</li>
+                            <li>根据官方公布的票价档信息，手动编辑票价（看台/内场/VIP等）</li>
+                            <li>开票当天，系统会在页面醒目提醒</li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-secondary">
+                <div class="card-body">
+                    <h6><i class="bi bi-lightbulb text-secondary"></i> 使用建议</h6>
+                    <small class="text-muted">
+                        <ul class="mb-0 ps-3">
+                            <li>关注演出后，回到首页或日历页查看开票时间</li>
+                            <li>在开票前设置好各票价档的信息，方便抢票时快速参考</li>
+                            <li>可设置用户备注，如"只想抢看台票"或"预算 800 元以内"</li>
+                            <li>关注列表会按开票时间自动排序，最先开票的在前面</li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

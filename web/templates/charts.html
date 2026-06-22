@@ -8,7 +8,7 @@
             <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>
             数据可视化图表
         </h2>
-        <p class="text-muted mb-0 mt-2">关键词: <span class="text-gradient fw-bold">{{ keyword }}</span></p>
+        <p class="text-muted mb-0 mt-2">基于数据库中的演出数据统计</p>
     </div>
 </div>
 
@@ -20,7 +20,7 @@
                 <i class="bi bi-music-note-list fs-4"></i>
                 <span class="stat-label ms-2">演出总数</span>
             </div>
-            <h2 class="stat-value">{{ result.get('summary', {}).get('total_events', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('event_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
@@ -29,16 +29,16 @@
                 <i class="bi bi-ticket fs-4"></i>
                 <span class="stat-label ms-2">票价档数</span>
             </div>
-            <h2 class="stat-value">{{ result.get('summary', {}).get('total_tickets', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('ticket_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stat-card stat-card-3 h-100">
             <div class="d-flex align-items-center mb-2">
                 <i class="bi bi-cash-stack fs-4"></i>
-                <span class="stat-label ms-2">平均票价</span>
+                <span class="stat-label ms-2">我的关注</span>
             </div>
-            <h2 class="stat-value">¥{{ result.get('summary', {}).get('avg_price', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('watchlist_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
@@ -47,7 +47,7 @@
                 <i class="bi bi-geo-alt fs-4"></i>
                 <span class="stat-label ms-2">覆盖城市</span>
             </div>
-            <h2 class="stat-value">{{ result.get('summary', {}).get('city_count', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('city_count', 0) }}</h2>
         </div>
     </div>
 </div>
