@@ -40,34 +40,36 @@ class PiaoDuoDuo:
         all_events = []
         mode_used = []
 
-        # 判断是否为国际艺人，优先使用社交媒体采集器
+        # 判断是否为国际艺人
         is_foreign = self.social_media.is_foreign_artist(keyword)
+
         if is_foreign:
-            print(f"  [检测] 识别为国际艺人，将从社交媒体获取资讯...")
+            # 国际艺人：只走社交媒体/官方渠道，不调国内平台（因为他们不会在大陆开演唱会）
+            print(f"  [检测] '{keyword}' 识别为国际艺人，仅查询社交媒体与官方渠道...")
             try:
                 social_events = self.social_media.search(keyword, city=city, limit=limit)
-                if social_events:
-                    print(f"  - 社交媒体/国际: 采集到 {len(social_events)} 场演出")
-                    all_events.extend(social_events)
-                    mode_used.append("国际艺人资讯")
+                print(f"  - 社交媒体/国际: 采集到 {len(social_events)} 场演出")
+                all_events.extend(social_events)
+                mode_used.append("社交媒体/官方渠道")
             except Exception as e:
                 print(f"  - 社交媒体: 采集失败 ({e})")
+            print(f"  - [提示] '{keyword}' 不会在中国大陆开演唱会，购票需访问官方渠道（Ticketmaster/AXS 等）")
+        else:
+            # 国内艺人/泛关键词：走国内三大平台
+            platform_sources = [
+                ("大麦网", self.damai),
+                ("猫眼演出", self.maoyan),
+                ("票星球", self.piaoxingqiu),
+            ]
 
-        # 国内平台采集（适用于国内艺人）
-        platform_sources = [
-            ("大麦网", self.damai),
-            ("猫眼演出", self.maoyan),
-            ("票星球", self.piaoxingqiu),
-        ]
-
-        for platform_name, collector in platform_sources:
-            try:
-                events = collector.search(keyword, city=city, limit=limit)
-                print(f"  - {platform_name}: 采集到 {len(events)} 场演出")
-                all_events.extend(events)
-                mode_used.append(platform_name)
-            except Exception as e:
-                print(f"  - {platform_name}: 采集失败 ({e})")
+            for platform_name, collector in platform_sources:
+                try:
+                    events = collector.search(keyword, city=city, limit=limit)
+                    print(f"  - {platform_name}: 采集到 {len(events)} 场演出")
+                    all_events.extend(events)
+                    mode_used.append(platform_name)
+                except Exception as e:
+                    print(f"  - {platform_name}: 采集失败 ({e})")
 
         # 如果没有任何数据，给出提示
         if not all_events:
@@ -80,6 +82,7 @@ class PiaoDuoDuo:
 
         self._events_cache = deduped
         self._last_search_keyword = keyword
+        self._is_foreign_search = is_foreign  # 标记是否为国际艺人搜索
         self.db.save_events(deduped)
         return deduped
 
@@ -342,17 +345,28 @@ class PiaoDuoDuo:
             if e.source_platform:
                 platforms_found.add(e.source_platform)
         data_source = list(platforms_found) if platforms_found else []
+        is_foreign = self._is_foreign_search
+
+        # 国际艺人时附上官方购票渠道
+        official_links = []
+        if is_foreign:
+            official_links = self.social_media.get_official_ticket_urls(keyword)
 
         if not events:
+            message = f"未找到 '{keyword}' 相关演出数据"
+            if is_foreign:
+                message = f"'{keyword}' 是国际艺人，未在其巡演区域发现相关演出。请查看下方官方购票渠道。"
             return {
                 'success': False,
-                'message': f"未找到 '{keyword}' 相关演出数据",
+                'message': message,
                 'keyword': keyword,
                 'events': [],
                 'comparison': [],
                 'visualization': {},
                 'data_source': data_source,
-                'is_sample_data': False
+                'is_sample_data': False,
+                'is_foreign_artist': is_foreign,
+                'official_links': official_links
             }
         comparison = self.compare_prices(events)
         visualization = self.visualize(events)
@@ -374,15 +388,26 @@ class PiaoDuoDuo:
             'summary': visualization.get('summary', {}),
             'stats': self.get_stats(),
             'data_source': data_source,
-            'is_sample_data': False
+            'is_sample_data': False,
+            'is_foreign_artist': is_foreign,
+            'official_links': official_links
         }
 
     def load_sample_data(self, keyword: str = "周杰伦") -> Dict:
         print(f"[票多多] 加载示例数据，关键词: {keyword}")
-        self.damai.mode = "sample"
-        self.maoyan.mode = "sample"
-        self.piaoxingqiu.mode = "sample"
-        self.social_media.mode = "sample"
+        # 先判断是否国际艺人
+        is_foreign = self.social_media.is_foreign_artist(keyword)
+        if is_foreign:
+            # 国际艺人示例数据：只启用社交媒体，不给国内假数据
+            self.damai.mode = "real"  # 关闭 sample
+            self.maoyan.mode = "real"
+            self.piaoxingqiu.mode = "real"
+            self.social_media.mode = "sample"
+        else:
+            self.damai.mode = "sample"
+            self.maoyan.mode = "sample"
+            self.piaoxingqiu.mode = "sample"
+            self.social_media.mode = "real"  # 关闭社交媒体（国内艺人不需要）
         result = self.run_full_workflow(keyword, limit=15)
         result['is_sample_data'] = True
         result['message'] = "这是示例数据，用于功能演示。切换到「自动模式」或「真实采集」可获取真实数据。"

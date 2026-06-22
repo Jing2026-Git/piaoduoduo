@@ -10,6 +10,9 @@
                 <h2 class="mb-2">
                     <i class="bi bi-search text-primary me-2"></i>
                     搜索结果: <span class="text-gradient">{{ keyword }}</span>
+                    {% if result.get('is_foreign_artist') %}
+                        <span class="badge bg-danger ms-2"><i class="bi bi-globe"></i> 国际艺人</span>
+                    {% endif %}
                 </h2>
                 <p class="text-muted mb-0">
                     共找到 {{ result.get('events', [])|length }} 场演出
@@ -28,6 +31,13 @@
                     切换到「自动模式」或「真实采集」可获取真实数据。
                 </div>
                 {% endif %}
+                {% if result.get('is_foreign_artist') %}
+                <div class="alert alert-info mt-2 mb-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>国际艺人说明：</strong>{{ keyword }} 不在中国大陆开演唱会。
+                    下方数据来自社交媒体和官方渠道，购票需访问下方列出的官方链接。
+                </div>
+                {% endif %}
             </div>
             <div class="mt-3 mt-md-0">
                 <a href="{{ url_for('export_csv', keyword=keyword) }}"
@@ -38,6 +48,40 @@
         </div>
     </div>
 </div>
+
+<!-- 国际艺人官方购票渠道 -->
+{% if result.get('is_foreign_artist') and result.get('official_links') %}
+<div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-danger border-4">
+    <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-link-45deg text-danger me-2"></i>官方购票渠道</h5>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            {{ keyword }} 不在中国大陆售票平台销售，请通过以下官方渠道购买：
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            {% for link in result.get('official_links', []) %}
+            <a href="{{ link.url }}" target="_blank" rel="noopener" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{{ link.name }}
+            </a>
+            {% endfor %}
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+            <i class="bi bi-clock me-1"></i>开票时间请关注其官方社交媒体账号或邮件订阅。
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- 无数据提示 -->
+{% if not result.get('events') %}
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+        <h4 class="mt-3">未找到相关演出</h4>
+        <p class="text-muted">{{ result.get('message', '请尝试其他关键词') }}</p>
+    </div>
+</div>
+{% endif %}
 
 <!-- 快速统计 -->
 <div class="row g-4 mb-4">
