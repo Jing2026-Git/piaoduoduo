@@ -35,20 +35,14 @@ def get_pdd():
 
 @app.route('/')
 def index():
-    """首页 - 搜索框 + 示例数据预览 + 统计"""
+    """首页 - 搜索框 + 统计"""
     pdd = get_pdd()
     stats = pdd.get_stats()
-
-    # 默认加载周杰伦示例数据
-    sample_data = pdd.load_sample_data("周杰伦")
-
-    # 获取关注列表和开票提醒（展示在侧边栏）
     watchlist = pdd.get_watchlist()[:5]
     upcoming_sales = pdd.get_upcoming_sales(7)
 
     return render_template('index.html',
                            stats=stats,
-                           sample_data=sample_data,
                            watchlist=watchlist,
                            upcoming_sales=upcoming_sales,
                            app_name="票多多 - 演唱会资讯聚合与关注工具")
@@ -59,25 +53,33 @@ def search():
     """搜索结果页 - 展示演出列表"""
     keyword = ""
     city = ""
-    mode = "sample"
+    mode = "auto"  # 默认为自动模式，优先尝试真实采集
 
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         city = request.form.get('city', '').strip()
-        mode = request.form.get('mode', 'sample')
+        mode = request.form.get('mode', 'auto')
     else:
-        keyword = request.args.get('keyword', '演唱会').strip()
+        keyword = request.args.get('keyword', '').strip()
         city = request.args.get('city', '').strip()
-        mode = request.args.get('mode', 'sample')
+        mode = request.args.get('mode', 'auto')
 
     if not keyword:
-        keyword = "演唱会"
+        # 无关键词时，重定向到首页
+        return redirect(url_for('index'))
 
     pdd = get_pdd()
+    # 设置采集模式
     pdd.damai.mode = mode
     pdd.maoyan.mode = mode
+    pdd.piaoxingqiu.mode = mode
+    pdd.social_media.mode = mode
 
-    result = pdd.run_full_workflow(keyword, city=city, limit=20)
+    # 示例模式：使用用户输入的关键词而非固定的周杰伦
+    if mode == "sample":
+        result = pdd.load_sample_data(keyword)
+    else:
+        result = pdd.run_full_workflow(keyword, city=city, limit=20)
 
     # 获取开票提醒
     upcoming_sales = pdd.get_upcoming_sales(7)

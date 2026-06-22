@@ -9,7 +9,7 @@
             <h1 class="text-center mb-2">
                 <span class="text-gradient fw-bold">🎫 票多多</span>
             </h1>
-            <p class="text-center text-muted mb-4">演唱会票价智能比价 · 开票状态追踪 · 跨平台对比</p>
+            <p class="text-center text-muted mb-4">多平台票价比价 · 开票状态追踪 · 跨平台对比</p>
 
             <!-- 搜索表单 -->
             <form action="{{ url_for('search') }}" method="POST" class="mt-4" id="searchForm">
@@ -20,7 +20,7 @@
                                 <i class="bi bi-search"></i>
                             </span>
                             <input type="text" class="form-control" name="keyword"
-                                   placeholder="输入关键词，如：周杰伦、五月天、演唱会..."
+                                   placeholder="搜索艺人、演出，如：Stray Kids、周杰伦、五月天..."
                                    value="{{ request.form.keyword }}" required>
                         </div>
                     </div>
@@ -36,9 +36,9 @@
                     </div>
                     <div class="col-md-2">
                         <select class="form-select form-select-lg" name="mode">
-                            <option value="auto">自动模式</option>
-                            <option value="sample">示例数据</option>
+                            <option value="auto" selected>自动模式</option>
                             <option value="real">真实采集</option>
+                            <option value="sample">示例数据</option>
                         </select>
                     </div>
                     <div class="col-md-1">
@@ -50,7 +50,7 @@
 
                 <div class="text-center mt-3">
                     <span class="text-muted small">快速搜索: </span>
-                    {% for kw in ['周杰伦', '五月天', '演唱会', '音乐节'] %}
+                    {% for kw in ['周杰伦', '五月天', 'Stray Kids', 'Taylor Swift'] %}
                     <a href="{{ url_for('search', keyword=kw) }}" class="badge bg-secondary text-decoration-none mx-1 quick-search">
                         {{ kw }}
                     </a>
@@ -69,7 +69,7 @@
                 <i class="bi bi-music-note-list fs-4"></i>
                 <span class="stat-label ms-2">演出总数</span>
             </div>
-            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('event_count', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('event_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
@@ -78,7 +78,7 @@
                 <i class="bi bi-ticket fs-4"></i>
                 <span class="stat-label ms-2">票价档位</span>
             </div>
-            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('ticket_count', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('ticket_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
@@ -87,7 +87,7 @@
                 <i class="bi bi-geo-alt fs-4"></i>
                 <span class="stat-label ms-2">覆盖城市</span>
             </div>
-            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('city_count', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('city_count', 0) }}</h2>
         </div>
     </div>
     <div class="col-md-3">
@@ -96,121 +96,84 @@
                 <i class="bi bi-globe fs-4"></i>
                 <span class="stat-label ms-2">售票平台</span>
             </div>
-            <h2 class="stat-value">{{ sample_data.get('stats', {}).get('platform_count', 0) }}</h2>
+            <h2 class="stat-value">{{ stats.get('platform_count', 0) }}</h2>
         </div>
     </div>
 </div>
 
-<!-- 示例演出列表 -->
-<div class="card shadow-sm border-0 rounded-4 mb-5">
-    <div class="card-header bg-white border-0 pb-0">
-        <h3 class="mb-0">
-            <i class="bi bi-stars text-primary"></i> 示例数据预览 - {{ sample_data.get('keyword', '') }}
-        </h3>
-        <p class="text-muted small mt-2 mb-0">
-            <i class="bi bi-clock"></i> 搜索时间: {{ sample_data.get('search_time', '') }}
-            <span class="mx-3">|</span>
-            <i class="bi bi-info-circle"></i> 共 {{ sample_data.get('events')|length }} 场演出
-        </p>
+<!-- 数据来源说明 -->
+<div class="alert alert-info d-flex align-items-center mb-5" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <div>
+        <strong>支持平台：</strong>大麦网、猫眼演出、票星球（国内）｜ 社交媒体/官方渠道（国际艺人如 Stray Kids、Taylor Swift 等）
+        &nbsp;|&nbsp;
+        <strong>搜索说明：</strong>搜索国际艺人时将自动切换到国际资讯模式，购票请访问官方渠道。
     </div>
-    <div class="card-body">
-        <div class="row g-3">
-            {% for event in sample_data.get('events', [])[:6] %}
-            <div class="col-md-6">
-                <div class="event-card h-100">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="mb-0 fw-bold">{{ event.get('title', '未知演出') }}</h5>
-                        <span class="badge bg-primary rounded-pill">{{ event.get('source_platform', '') }}</span>
-                    </div>
-                    <div class="text-muted small mb-2">
-                        <i class="bi bi-person-circle me-1"></i>{{ event.get('artist', '') }}
-                        <span class="mx-2">|</span>
-                        <i class="bi bi-geo-alt me-1"></i>{{ event.get('city', '') }}
-                    </div>
-                    <div class="text-muted small mb-2">
-                        <i class="bi bi-geo-alt-fill me-1"></i>{{ event.get('venue', '') }}
-                        <span class="mx-2">|</span>
-                        <i class="bi bi-calendar-event me-1"></i>{{ event.get('date_str', '') }}
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                        <div>
-                            <span class="fw-bold text-danger fs-5">
-                                ¥{{ event.get('min_price', 0) }}
-                            </span>
-                            <small class="text-muted">起</small>
-                        </div>
-                        {% if event.get('min_price', 0) > 0 %}
-                        <span class="badge bg-success rounded-pill">
-                            <i class="bi bi-check-circle-fill me-1"></i>可查询
-                        </span>
-                        {% else %}
-                        <span class="badge bg-warning rounded-pill">
-                            <i class="bi bi-exclamation-triangle me-1"></i>待定
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
+</div>
+
+<!-- 关注演出 & 即将开票 -->
+<div class="row g-4 mb-5">
+    {% if watchlist %}
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-heart-fill text-danger me-2"></i>我的关注</h5>
             </div>
-            {% endfor %}
+            <div class="card-body">
+                {% for item in watchlist %}
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-semibold small">{{ item.get('title', '') }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">{{ item.get('city', '') }} · {{ item.get('date_str', '')[:10] }}</div>
+                    </div>
+                    <a href="{{ url_for('search', keyword=item.get('artist', '')) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
-</div>
-
-<!-- 比价结果 -->
-<div class="card shadow-sm border-0 rounded-4 mb-5">
-    <div class="card-header bg-white border-0 pb-0">
-        <h3 class="mb-0">
-            <i class="bi bi-bar-chart-2-fill text-success"></i> 智能比价结果
-        </h3>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>演出</th>
-                        <th>城市</th>
-                        <th>最低票价</th>
-                        <th>最低平台</th>
-                        <th>可购平台</th>
-                        <th>推荐</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for comp in sample_data.get('comparison', [])[:8] %}
-                    <tr>
-                        <td class="fw-semibold">{{ comp.get('event_title', '') }}</td>
-                        <td>{{ comp.get('city', '') }}</td>
-                        <td><span class="text-danger fw-bold">¥{{ comp.get('min_price', 0)|int }}</span></td>
-                        <td>
-                            <span class="badge bg-primary">{{ comp.get('min_price_platform', '') }}</span>
-                        </td>
-                        <td>
-                            {% for platform in comp.get('platforms_with_data', []) %}
-                            <span class="badge bg-secondary me-1">{{ platform }}</span>
-                            {% endfor %}
-                        </td>
-                        <td class="small">{{ comp.get('recommendation', '').split('\n')[0] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    {% endif %}
+    {% if upcoming_sales %}
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-clock-fill text-warning me-2"></i>即将开票</h5>
+            </div>
+            <div class="card-body">
+                {% for item in upcoming_sales[:5] %}
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-semibold small">{{ item.get('title', '') }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">
+                            {{ item.get('city', '') }}
+                            {% if item.get('days_to_sale') is not none %}
+                            · <span class="text-danger">{{ item.get('days_to_sale') }}天后</span> 开票
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge bg-warning text-dark">{{ item.get('sale_time', '')[:10] }}</span>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <!-- 功能说明 -->
 <div class="row g-4 mb-5">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="feature-card h-100">
             <div class="feature-icon bg-primary">
                 <i class="bi bi-search text-white fs-3"></i>
             </div>
             <h5>多平台数据采集</h5>
-            <p class="text-muted small mb-0">同时从大麦网、猫眼演出等主流售票平台采集演出信息与票价数据</p>
+            <p class="text-muted small mb-0">同时从大麦网、猫眼、票星球等售票平台采集演出信息与票价数据</p>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="feature-card h-100">
             <div class="feature-icon bg-success">
                 <i class="bi bi-arrow-left-right text-white fs-3"></i>
@@ -219,13 +182,22 @@
             <p class="text-muted small mb-0">同一场演出跨平台对比，智能推荐性价比最高的购票方案</p>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="feature-card h-100">
             <div class="feature-icon bg-warning">
                 <i class="bi bi-graph-up text-white fs-3"></i>
             </div>
             <h5>价格趋势追踪</h5>
             <p class="text-muted small mb-0">记录票价变化历史，观察价格走势，帮你找到最佳购票时机</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="feature-card h-100">
+            <div class="feature-icon bg-danger">
+                <i class="bi bi-globe text-white fs-3"></i>
+            </div>
+            <h5>国际艺人支持</h5>
+            <p class="text-muted small mb-0">自动识别 Stray Kids、Taylor Swift 等国际艺人，提供社交媒体资讯与官方购票指引</p>
         </div>
     </div>
 </div>

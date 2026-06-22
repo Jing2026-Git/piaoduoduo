@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 
 from .collectors.damai import DamaiCollector
 from .collectors.maoyan import MaoyanCollector
+from .collectors.piaoxingqiu import PiaoxingqiuCollector
+from .collectors.social_media import SocialMediaCollector
 from .cleaner import DataCleaner
 from .comparator import PriceComparator
 from .visualizer import Visualizer
@@ -22,35 +24,59 @@ class PiaoDuoDuo:
         self.db = Database(db_path)
         self.damai = DamaiCollector(mode=mode)
         self.maoyan = MaoyanCollector(mode=mode)
+        self.piaoxingqiu = PiaoxingqiuCollector(mode=mode)
+        self.social_media = SocialMediaCollector(mode=mode)
         self.cleaner = DataCleaner()
         self.comparator = PriceComparator()
         self.visualizer = Visualizer()
         self._events_cache = []
         self._last_search_keyword = ""
+        self._last_mode = mode
 
     # ---------- 核心功能: 搜索与采集 ----------
 
     def search(self, keyword: str, city: str = "", limit: int = 30) -> List[Event]:
         print(f"[票多多] 正在搜索关键词: '{keyword}'{' (城市: ' + city + ')' if city else ''}")
         all_events = []
+        mode_used = []
 
-        try:
-            damai_events = self.damai.search(keyword, city=city, limit=limit)
-            print(f"  - 大麦网: 采集到 {len(damai_events)} 场演出")
-            all_events.extend(damai_events)
-        except Exception as e:
-            print(f"  - 大麦网: 采集失败 ({e})")
+        # 判断是否为国际艺人，优先使用社交媒体采集器
+        is_foreign = self.social_media.is_foreign_artist(keyword)
+        if is_foreign:
+            print(f"  [检测] 识别为国际艺人，将从社交媒体获取资讯...")
+            try:
+                social_events = self.social_media.search(keyword, city=city, limit=limit)
+                if social_events:
+                    print(f"  - 社交媒体/国际: 采集到 {len(social_events)} 场演出")
+                    all_events.extend(social_events)
+                    mode_used.append("国际艺人资讯")
+            except Exception as e:
+                print(f"  - 社交媒体: 采集失败 ({e})")
 
-        try:
-            maoyan_events = self.maoyan.search(keyword, city=city, limit=limit)
-            print(f"  - 猫眼演出: 采集到 {len(maoyan_events)} 场演出")
-            all_events.extend(maoyan_events)
-        except Exception as e:
-            print(f"  - 猫眼演出: 采集失败 ({e})")
+        # 国内平台采集（适用于国内艺人）
+        platform_sources = [
+            ("大麦网", self.damai),
+            ("猫眼演出", self.maoyan),
+            ("票星球", self.piaoxingqiu),
+        ]
+
+        for platform_name, collector in platform_sources:
+            try:
+                events = collector.search(keyword, city=city, limit=limit)
+                print(f"  - {platform_name}: 采集到 {len(events)} 场演出")
+                all_events.extend(events)
+                mode_used.append(platform_name)
+            except Exception as e:
+                print(f"  - {platform_name}: 采集失败 ({e})")
+
+        # 如果没有任何数据，给出提示
+        if not all_events:
+            print(f"  [提示] 未找到 '{keyword}' 相关演出，请尝试其他关键词")
 
         cleaned = self.cleaner.clean(all_events)
         deduped = self.cleaner.dedupe(cleaned)
         print(f"  - 清洗后: {len(cleaned)} 场，去重后: {len(deduped)} 场")
+        print(f"  - 数据来源: {', '.join(mode_used) if mode_used else '无'}")
 
         self._events_cache = deduped
         self._last_search_keyword = keyword
@@ -309,14 +335,24 @@ class PiaoDuoDuo:
 
     def run_full_workflow(self, keyword: str, city: str = "", limit: int = 30) -> Dict:
         events = self.search(keyword, city=city, limit=limit)
+
+        # 判断数据来源
+        platforms_found = set()
+        for e in events:
+            if e.source_platform:
+                platforms_found.add(e.source_platform)
+        data_source = list(platforms_found) if platforms_found else []
+
         if not events:
             return {
                 'success': False,
-                'message': '没有找到相关演出数据',
+                'message': f"未找到 '{keyword}' 相关演出数据",
                 'keyword': keyword,
                 'events': [],
                 'comparison': [],
-                'visualization': {}
+                'visualization': {},
+                'data_source': data_source,
+                'is_sample_data': False
             }
         comparison = self.compare_prices(events)
         visualization = self.visualize(events)
@@ -336,13 +372,19 @@ class PiaoDuoDuo:
             'visualization': visualization,
             'availability': availability,
             'summary': visualization.get('summary', {}),
-            'stats': self.get_stats()
+            'stats': self.get_stats(),
+            'data_source': data_source,
+            'is_sample_data': False
         }
 
     def load_sample_data(self, keyword: str = "周杰伦") -> Dict:
         print(f"[票多多] 加载示例数据，关键词: {keyword}")
         self.damai.mode = "sample"
         self.maoyan.mode = "sample"
+        self.piaoxingqiu.mode = "sample"
+        self.social_media.mode = "sample"
         result = self.run_full_workflow(keyword, limit=15)
+        result['is_sample_data'] = True
+        result['message'] = "这是示例数据，用于功能演示。切换到「自动模式」或「真实采集」可获取真实数据。"
         print(f"[票多多] 示例数据加载完成，共 {len(result['events'])} 场演出")
         return result
